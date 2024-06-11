@@ -69,11 +69,7 @@ races_final_df = races_selected_df.withColumn("ingestion_date", current_timestam
 
 # COMMAND ----------
 
-races_final_df.write.mode("overwrite").parquet("/mnt/formula1dlspalex/processed/races")
-
-# COMMAND ----------
-
-df = spark.read.parquet("/mnt/formula1dlspalex/processed/races")
+races_final_df.write.mode("overwrite").partitionBy('race_year').parquet("/mnt/formula1dlspalex/processed/races")
 
 # COMMAND ----------
 

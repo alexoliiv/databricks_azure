@@ -64,11 +64,6 @@ circuits_final_df = circuits_renamed_df.withColumn("ingestion_date", current_tim
 
 # COMMAND ----------
 
-circuits_final_df = circuits_renamed_df.withColumn("ingestion_date", current_timestamp()) \
-  .withColumn("race_timestamp", to_timestamp(concat(col('date'), lit(' '), col('time')), 'yyyy-MM-dd HH:mm:ss'))
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC
 # MAGIC #### Step 5 - Write data to datalake as parquet
@@ -76,10 +71,6 @@ circuits_final_df = circuits_renamed_df.withColumn("ingestion_date", current_tim
 # COMMAND ----------
 
 circuits_final_df.write.mode("overwrite").parquet("/mnt/formula1dlspalex/processed/circuits")
-
-# COMMAND ----------
-
-df = spark.read.parquet("/mnt/formula1dlspalex/processed/circuits")
 
 # COMMAND ----------
 
