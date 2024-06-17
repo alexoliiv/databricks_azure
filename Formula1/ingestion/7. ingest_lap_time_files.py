@@ -12,7 +12,20 @@
 # COMMAND ----------
 
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DateType,FloatType
-from pyspark.sql.functions import current_timestamp
+from pyspark.sql.functions import current_timestamp, lit
+
+# COMMAND ----------
+
+# MAGIC %run "../includes/configuration"   
+
+# COMMAND ----------
+
+# MAGIC %run "../includes/common_functions"
+
+# COMMAND ----------
+
+dbutils.widgets.text("p_data_source", "")
+v_data_source = dbutils.widgets.get("p_data_source")
 
 # COMMAND ----------
 
@@ -36,7 +49,7 @@ lap_times_schema = StructType(
 
 lap_times_df = spark.read \
 .schema(lap_times_schema) \
-    .csv("/mnt/formula1dlspalex/raw/lap_times/")
+    .csv(f"{bronze_folder_path}/lap_times/")
 
 # COMMAND ----------
 
@@ -46,9 +59,10 @@ lap_times_df = spark.read \
 # COMMAND ----------
 
 lap_times_renamed_df = (
-    lap_times_df.withColumnRenamed("raceid", "race_id")
+    add_ingestion_date(lap_times_df)
+    .withColumn("source",lit(v_data_source))
+    .withColumnRenamed("raceid", "race_id")
     .withColumnRenamed("driverId", "driver_id")
-    .withColumn("ingestion_date", current_timestamp())
 )
 
 # COMMAND ----------
@@ -58,4 +72,5 @@ lap_times_renamed_df = (
 
 # COMMAND ----------
 
-lap_times_renamed_df.write.mode("overwrite").parquet("/mnt/formula1dlspalex/processed/lap_times")
+lap_times_renamed_df.write.mode("overwrite").parquet(f"{silver_folder_path}/lap_times")
+##lap_times_renamed_df.write.mode("overwrite").format("parquet").saveAsTable("f1_processed.lap_times")

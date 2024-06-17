@@ -12,7 +12,20 @@
 # COMMAND ----------
 
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DateType,FloatType
-from pyspark.sql.functions import current_timestamp
+from pyspark.sql.functions import current_timestamp, lit
+
+# COMMAND ----------
+
+# MAGIC %run "../includes/configuration"   
+
+# COMMAND ----------
+
+# MAGIC %run "../includes/common_functions"
+
+# COMMAND ----------
+
+dbutils.widgets.text("p_data_source", "")
+v_data_source = dbutils.widgets.get("p_data_source")
 
 # COMMAND ----------
 
@@ -37,7 +50,7 @@ pitstops_schema = StructType(
 
 pitstops_df = spark.read \
 .schema(pitstops_schema) \
-    .json("/mnt/formula1dlspalex/raw/pit_stops.json")
+    .json(f"{bronze_folder_path}/pit_stops.json")
 
 # COMMAND ----------
 
@@ -47,9 +60,10 @@ pitstops_df = spark.read \
 # COMMAND ----------
 
 pitstops_renamed_df = (
-    pitstops_df.withColumnRenamed("raceid", "race_id")
+    add_ingestion_date(pitstops_df)
+    .withColumn("source",lit(v_data_source))
+    .withColumnRenamed("raceid", "race_id")
     .withColumnRenamed("driverId", "driver_id")
-    .withColumn("ingestion_date", current_timestamp())
 )
 
 # COMMAND ----------
@@ -59,8 +73,8 @@ pitstops_renamed_df = (
 
 # COMMAND ----------
 
-pitstops_renamed_df.write.mode("overwrite").partitionBy("race_id").parquet("/mnt/formula1dlspalex/processed/pit_stops")
+pitstops_renamed_df.write.mode("overwrite").partitionBy("race_id").parquet(f"{silver_folder_path}/pit_stops")
+##pitstops_renamed_df.write.mode("overwrite").partitionBy("race_id").format("parquet").saveAsTable("f1_processed.pit_stops")
 
 # COMMAND ----------
-
 
