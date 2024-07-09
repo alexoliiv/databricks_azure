@@ -7,17 +7,30 @@
 
 # MAGIC
 # MAGIC %md
-# MAGIC #### 1 - Read the JSON file using the spark dataframe reader API
+# MAGIC #### Libraries and configuration
 
 # COMMAND ----------
 
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DateType,FloatType
-from pyspark.sql.functions import current_timestamp
+from pyspark.sql.functions import current_timestamp, lit
+
+# COMMAND ----------
+
+# MAGIC %run "../includes/configuration"   
+
+# COMMAND ----------
+
+# MAGIC %run "../includes/common_functions"
+
+# COMMAND ----------
+
+dbutils.widgets.text("p_data_source", "")
+v_data_source = dbutils.widgets.get("p_data_source")
 
 # COMMAND ----------
 
 # MAGIC %md 
-# MAGIC #### Step 2 - Define data structure and read csv folder
+# MAGIC #### Step 2 - Define data structure and read .json folder
 
 # COMMAND ----------
 
@@ -37,29 +50,24 @@ qualifying_schema = StructType(
 
 # COMMAND ----------
 
-qualifying_df = spark.read \
-.schema(qualifying_schema) \
-    .json("/mnt/formula1dlspalex/raw/qualifying")
-
-# COMMAND ----------
-
-display(qualifying_df['q3'].contains('/N'))
-
-# COMMAND ----------
-
-
+qualifying_df = (
+    spark.read.schema(qualifying_schema)
+    .option("multiLine", True)
+    .json(f"{bronze_folder_path}/qualifying")
+)
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC #### Step 3 - Renaming columns
+# MAGIC #### Step 3 - Renaming and adding two columns
 
 # COMMAND ----------
 
-lap_times_renamed_df = (
-    lap_times_df.withColumnRenamed("raceid", "race_id")
+qualifying_renamed_df = (
+    add_ingestion_date(qualifying_df)
+    .withColumnRenamed("raceid", "race_id")
     .withColumnRenamed("driverId", "driver_id")
-    .withColumn("ingestion_date", current_timestamp())
+    .withColumn("source", lit(v_data_source))
 )
 
 # COMMAND ----------
@@ -69,4 +77,8 @@ lap_times_renamed_df = (
 
 # COMMAND ----------
 
-lap_times_renamed_df.write.mode("overwrite").parquet("/mnt/formula1dlspalex/processed/lap_times")
+qualifying_renamed_df.write.mode("overwrite").parquet(f"{silver_folder_path}/qualifying")
+##qualifying_renamed_df.write.mode("overwrite").format("parquet").saveAsTable("f1_processed.qualifying")
+
+# COMMAND ----------
+

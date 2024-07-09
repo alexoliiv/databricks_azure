@@ -1,13 +1,7 @@
 # Databricks notebook source
-# MAGIC %md
-# MAGIC
-# MAGIC #### Ingest results.json file
-
-# COMMAND ----------
-
 # MAGIC
 # MAGIC %md
-# MAGIC #### 1 - Read the JSON file using the spark dataframe reader API
+# MAGIC #### Libraries and configuration
 
 # COMMAND ----------
 
@@ -16,8 +10,21 @@ from pyspark.sql.functions import current_timestamp,concat,lit
 
 # COMMAND ----------
 
+# MAGIC %run "../includes/configuration"   
+
+# COMMAND ----------
+
+# MAGIC %run "../includes/common_functions"
+
+# COMMAND ----------
+
+dbutils.widgets.text("p_data_source", "")
+v_data_source = dbutils.widgets.get("p_data_source")
+
+# COMMAND ----------
+
 # MAGIC %md 
-# MAGIC #### Step 2 - Define data structure
+# MAGIC #### Step 2 - Defining data structure and reading .json
 
 # COMMAND ----------
 
@@ -49,17 +56,19 @@ results_schema = StructType(
 
 results_df = spark.read \
 .schema(results_schema) \
-    .json("/mnt/formula1dlspalex/raw/results.json")
+    .json(f"{bronze_folder_path}/results.json")
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC #### Step 3 - Renaming columns
+# MAGIC #### Step 3 - Renaming columns and adding two columns
 
 # COMMAND ----------
 
 results_renamed_df = (
-    results_df.withColumnRenamed("resultId", "result_id")
+    add_ingestion_date(results_df) 
+    
+    .withColumnRenamed("resultId", "result_id")
     .withColumnRenamed("raceId", "race_id")
     .withColumnRenamed("driverId", "driver_id")
     .withColumnRenamed("constructorId", "constructor_id")
@@ -68,7 +77,6 @@ results_renamed_df = (
     .withColumnRenamed("fastestLap","fastest_lap")
     .withColumnRenamed("fastestLapTime","fastest_lap_time")
     .withColumnRenamed("fastestLapSpeed","fastest_lap_speed")
-    .withColumn("ingestion_date", current_timestamp())
 )
 
 # COMMAND ----------
@@ -87,8 +95,8 @@ results_final_df = results_renamed_df.drop(results_renamed_df['statusId'])
 
 # COMMAND ----------
 
-results_final_df.write.mode("overwrite").partitionBy("race_id").parquet("/mnt/formula1dlspalex/processed/results")
+results_final_df.write.mode("overwrite").parquet(f"{silver_folder_path}/results")
+##results_final_df.write.mode("overwrite").partitionBy("race_id").format("parquet").saveAsTable("f1_processed.results")
 
 # COMMAND ----------
-
 

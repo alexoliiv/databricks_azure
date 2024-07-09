@@ -65,4 +65,3 @@ dbutils.fs.unmount('/mnt/formula1dlspalex/demo')
 
 # COMMAND ----------
 
-

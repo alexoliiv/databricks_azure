@@ -1,13 +1,7 @@
 # Databricks notebook source
-# MAGIC %md
-# MAGIC
-# MAGIC #### Ingest drivers.json file
-
-# COMMAND ----------
-
 # MAGIC
 # MAGIC %md
-# MAGIC #### 1 - Read the JSON file using the spark dataframe reader API
+# MAGIC #### Libraries and configuration
 
 # COMMAND ----------
 
@@ -16,8 +10,21 @@ from pyspark.sql.functions import current_timestamp,concat,lit
 
 # COMMAND ----------
 
+# MAGIC %run "../includes/configuration"
+
+# COMMAND ----------
+
+# MAGIC %run "../includes/common_functions"
+
+# COMMAND ----------
+
+dbutils.widgets.text("p_data_source", "")
+v_data_source = dbutils.widgets.get("p_data_source")
+
+# COMMAND ----------
+
 # MAGIC %md 
-# MAGIC #### Step 2 - Define dataframe structure
+# MAGIC #### Step 1 - Define schema and reading .json
 
 # COMMAND ----------
 
@@ -47,24 +54,30 @@ drivers_schema = StructType(
 
 drivers_df = spark.read \
 .schema(drivers_schema) \
-    .json("/mnt/formula1dlspalex/raw/drivers.json")
+    .json(f"{bronze_folder_path}/drivers.json")
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC #### Step 3 - Renaming columns
+# MAGIC #### Step 2 - Renaming columns and adding two columns
 
 # COMMAND ----------
 
-drivers_renamed_df = drivers_df.withColumnRenamed("driverId","driver_Id") \
-    .withColumnRenamed("driverRef","driver_Ref") \
-        .withColumn("ingestion_date",current_timestamp()) \
-            .withColumn("name", concat(drivers_df['name.forename'],lit(' '),drivers_df['name.surname']))
+drivers_renamed_df = (
+    add_ingestion_date(drivers_df)
+    .withColumnRenamed("driverId", "driver_Id")
+    .withColumnRenamed("driverRef", "driver_Ref")
+    .withColumn(
+        "name",
+        concat(drivers_df["name.forename"], lit(" "), drivers_df["name.surname"]),
+    )
+    .withColumn("source",lit(v_data_source))
+)
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC #### Step 4 - Drop unwanted columns from the dataframe
+# MAGIC #### Step 3 - Drop unwanted columns from the dataframe
 
 # COMMAND ----------
 
@@ -73,8 +86,9 @@ drivers_final_df = drivers_renamed_df.drop(drivers_renamed_df['url'])
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC #### Step 5 - Write output to parquet file
+# MAGIC #### Step 4 - Write output to parquet file
 
 # COMMAND ----------
 
-drivers_final_df.write.mode("overwrite").parquet("/mnt/formula1dlspalex/processed/drivers")
+drivers_final_df.write.mode("overwrite").parquet(f"{silver_folder_path}/drivers")
+##drivers_final_df.write.mode("overwrite").format("parquet").saveAsTable("f1_processed.drivers")

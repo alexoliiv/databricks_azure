@@ -36,16 +36,15 @@ def mount_adls(storage_account_name, container_name):
 
 # COMMAND ----------
 
-mount_adls('formula1dlspalex', 'raw')
+mount_adls('formula1dlspalex', 'bronze')
 
 # COMMAND ----------
 
-mount_adls('formula1dlspalex', 'processed')
+mount_adls('formula1dlspalex', 'silver')
 
 # COMMAND ----------
 
-mount_adls('formula1dlspalex', 'presentation')
+mount_adls('formula1dlspalex', 'gold')
 
 # COMMAND ----------
-
 
